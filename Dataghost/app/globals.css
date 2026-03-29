@@ -1,0 +1,171 @@
+/* globals.css — DataGhost */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── MOBILE RESPONSIVE ─────────────────────────────── */
+
+/* On mobile, main content takes full width (sidebar slides in as overlay) */
+@media (max-width: 768px) {
+  /* All main content areas — remove the 260px sidebar offset */
+  main {
+    margin-left: 0 !important;
+    padding: 1rem !important;
+    padding-top: 4.5rem !important; /* space for hamburger button */
+  }
+
+  /* Dashboard KPI cards — 2 columns on mobile */
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Stats rows — 2 columns on mobile */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Charts — stack vertically on mobile */
+  .chart-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Tables — allow horizontal scroll */
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+
+  /* Modals — full screen on mobile */
+  .modal-card {
+    width: 95% !important;
+    max-width: 95% !important;
+    margin: 1rem !important;
+    padding: 1.25rem !important;
+    max-height: 92vh !important;
+  }
+
+  /* Filter bars — wrap on mobile */
+  .filter-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  /* Buttons in header — smaller on mobile */
+  .header-actions {
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Cards in compliance/assets — single column */
+  .cards-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Hide floating badges on landing page */
+  .hide-mobile {
+    display: none !important;
+  }
+
+  /* Vulnerability stats — 3 columns on mobile */
+  .vuln-stats {
+    grid-template-columns: repeat(3, 1fr) !important;
+    font-size: 0.75rem !important;
+  }
+
+  /* Profile tabs — wrap */
+  .profile-tabs button {
+    font-size: 0.7rem !important;
+    padding: 0.4rem 0.5rem !important;
+  }
+
+  /* Site auditor tabs */
+  .audit-tabs {
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+  }
+
+  /* CVE cards grid — single column */
+  .cve-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Remediation steps */
+  .step-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Dashboard quick actions grid */
+  .quick-actions {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Threat cards grid — single column */
+  .threat-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Very small phones — tighter padding */
+  main {
+    padding: 0.75rem !important;
+    padding-top: 4rem !important;
+  }
+
+  /* Single column for all grids on tiny screens */
+  .kpi-grid,
+  .stats-grid,
+  .vuln-stats {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  h1 {
+    font-size: 1.25rem !important;
+  }
+}
+
+/* ─── SCROLLBAR STYLING ─────────────────────────────── */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+/* ─── ANIMATIONS ─────────────────────────────────────── */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 5px rgba(16,185,129,0.3); }
+  50% { box-shadow: 0 0 20px rgba(16,185,129,0.6); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
