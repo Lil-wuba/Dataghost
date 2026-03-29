@@ -75,8 +75,9 @@ export default function Sidebar() {
     setDarkMode(newMode)
     applyTheme(newMode)
   }
-
+  
   async function logout() {
+    const pathname = typeof window !== 'undefined' ? window.location.pathname : ''
     const { data: { session } } = await supabase.auth.getSession()
     if (session) {
       await supabase.from('audit_logs').insert([{ user_id: session.user.id, action: 'auth.logout', entity_type: 'auth', details: {} }])

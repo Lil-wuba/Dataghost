@@ -19,6 +19,8 @@ export default function Assets() {
   const [assets, setAssets] = useState([])
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
+  const [scanModal, setScanModal] = useState(false)
+  const [scanResults, setScanResults] = useState([])
   const [toast, setToast] = useState('')
   const [scanning, setScanning] = useState({})
   const [form, setForm] = useState({ name: '', ip_address: '', hostname: '', asset_type: 'server', os: '', environment: 'production', criticality: 'medium', owner_name: '' })
@@ -35,14 +37,10 @@ export default function Assets() {
   }
 
   function validateIP(ip) {
-    if (!ip) return true // optional field
-    // IPv4: e.g. 192.168.1.1
+    if (!ip) return true
     const ipv4 = /^(\d{1,3}\.){3}\d{1,3}$/
-    // IPv6: e.g. 2001:db8::1
     const ipv6 = /^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$/
-    // CIDR: e.g. 192.168.1.0/24
     const cidr = /^(\d{1,3}\.){3}\d{1,3}\/\d{1,2}$/
-    // Hostname: e.g. server-01.internal.corp
     const hostname = /^[a-zA-Z0-9]([a-zA-Z0-9\-\.]{0,253}[a-zA-Z0-9])?$/
     return ipv4.test(ip) || ipv6.test(ip) || cidr.test(ip) || hostname.test(ip)
   }
@@ -51,20 +49,17 @@ export default function Assets() {
     e.preventDefault()
     if (!form.name.trim()) { showToast('❌ Asset name is required'); return }
     if (form.ip_address && !validateIP(form.ip_address)) {
-      showToast('❌ Invalid IP address. Use formats like 192.168.1.1, server.corp, or 10.0.0.0/24')
+      showToast('❌ Invalid IP. Use formats like 192.168.1.1, server.corp, or 10.0.0.0/24')
       return
     }
     const { data: { session } } = await supabase.auth.getSession()
     const { error } = await supabase.from('assets').insert([{ ...form, user_id: session.user.id }])
-    if (error) showToast('Error: ' + error.message)
-    else {
-      setShowModal(false)
-      setForm({ name: '', ip_address: '', hostname: '', asset_type: 'server', os: '', environment: 'production', criticality: 'medium', owner_name: '' })
-      loadAssets()
-      showToast('✅ Asset added!')
-      // Log to audit
-      await supabase.from('audit_logs').insert([{ user_id: session.user.id, action: 'asset.created', entity_type: 'asset', details: { name: form.name, ip_address: form.ip_address } }])
-    }
+    if (error) { showToast('Error: ' + error.message); return }
+    setShowModal(false)
+    setForm({ name: '', ip_address: '', hostname: '', asset_type: 'server', os: '', environment: 'production', criticality: 'medium', owner_name: '' })
+    loadAssets()
+    showToast('✅ Asset added!')
+    await supabase.from('audit_logs').insert([{ user_id: session.user.id, action: 'asset.created', entity_type: 'asset', details: { name: form.name, ip_address: form.ip_address } }])
   }
 
   async function scanAsset(assetId) {
@@ -73,9 +68,17 @@ export default function Assets() {
     try {
       const { error } = await supabase.rpc('simulate_scan', { p_asset_id: assetId, p_user_id: session.user.id })
       if (error) throw error
-      showToast('✅ Scan completed!')
+      const { data: newVulns } = await supabase
+        .from('vulnerabilities')
+        .select('title, severity')
+        .eq('asset_id', assetId)
+        .eq('user_id', session.user.id)
+        .order('discovered_at', { ascending: false })
+        .limit(10)
+      setScanResults(newVulns || [])
+      setScanModal(true)
       loadAssets()
-    } catch (error) { showToast('Error: ' + error.message) }
+    } catch (err) { showToast('Error: ' + err.message) }
     finally { setScanning(prev => ({ ...prev, [assetId]: false })) }
   }
 
@@ -84,16 +87,23 @@ export default function Assets() {
     const { data: { session } } = await supabase.auth.getSession()
     await supabase.from('assets').delete().eq('id', assetId)
     await supabase.from('audit_logs').insert([{ user_id: session.user.id, action: 'asset.deleted', entity_type: 'asset', entity_id: assetId, details: {} }])
-    loadAssets(); showToast('Asset deleted')
+    loadAssets()
+    showToast('Asset deleted')
   }
 
-  const filtered = assets.filter(a => a.name.toLowerCase().includes(search.toLowerCase()))
+  const filtered = assets.filter(a =>
+    a.name?.toLowerCase().includes(search.toLowerCase()) ||
+    a.ip_address?.toLowerCase().includes(search.toLowerCase()) ||
+    a.hostname?.toLowerCase().includes(search.toLowerCase())
+  )
 
   const bg = darkMode ? '#0A0A0F' : '#F0F2F5'
   const cardBg = darkMode ? '#13131A' : '#FFFFFF'
   const border = darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)'
   const textMuted = darkMode ? '#6B7280' : '#9CA3AF'
   const textMain = darkMode ? '#FFFFFF' : '#111111'
+  const sevColors = { critical: '#EF4444', high: '#F59E0B', medium: '#6366F1', low: '#6B7280' }
+  const sevBg = { critical: 'rgba(239,68,68,0.1)', high: 'rgba(245,158,11,0.1)', medium: 'rgba(99,102,241,0.1)', low: 'rgba(107,114,128,0.1)' }
 
   const inputStyle = {
     width: '100%', padding: '0.6rem 0.875rem',
@@ -107,11 +117,11 @@ export default function Assets() {
     <div style={{ background: bg, minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', transition: 'background 0.3s' }}>
       <Sidebar />
       <main style={{ marginLeft: '260px', padding: '1.5rem' }}>
+
         {toast && (
-          <div style={{ position: 'fixed', top: '1.5rem', left: '50%', transform: 'translateX(-50%)', right: 'auto', bottom: 'auto', background: cardBg, border: '1px solid #10B981', borderRadius: '10px', padding: '0.875rem 1.25rem', color: textMain, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', zIndex: 3000, fontSize: '0.875rem', whiteSpace: 'nowrap' }}>{toast}</div>
+          <div style={{ position: 'fixed', top: '1.5rem', left: '50%', transform: 'translateX(-50%)', background: cardBg, border: '1px solid #10B981', borderRadius: '10px', padding: '0.875rem 1.25rem', color: textMain, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', zIndex: 3000, fontSize: '0.875rem', whiteSpace: 'nowrap' }}>{toast}</div>
         )}
 
-        {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
           <div>
             <h1 style={{ margin: '0 0 0.25rem', fontSize: '1.5rem', fontWeight: '700', color: textMain }}>Assets</h1>
@@ -120,7 +130,6 @@ export default function Assets() {
           <button onClick={() => setShowModal(true)} style={{ padding: '0.6rem 1.25rem', background: '#10B981', border: 'none', borderRadius: '8px', color: 'white', fontFamily: 'inherit', fontSize: '0.875rem', cursor: 'pointer', fontWeight: '600' }}>+ Add Asset</button>
         </div>
 
-        {/* Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
           {[
             { label: 'Total Assets', value: assets.length, color: '#10B981' },
@@ -128,23 +137,21 @@ export default function Assets() {
             { label: 'Production', value: assets.filter(a => a.environment === 'production').length, color: '#F59E0B' },
             { label: 'Scanned', value: assets.filter(a => a.last_scanned).length, color: '#6366F1' },
           ].map((stat, i) => (
-            <div key={i} style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: '12px', padding: '1rem', transition: 'background 0.3s' }}>
+            <div key={i} style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: '12px', padding: '1rem' }}>
               <p style={{ margin: '0 0 0.5rem', color: textMuted, fontSize: '0.8rem' }}>{stat.label}</p>
               <p style={{ margin: 0, color: stat.color, fontSize: '1.75rem', fontWeight: '700' }}>{stat.value}</p>
             </div>
           ))}
         </div>
 
-        {/* Search */}
         <div style={{ marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: cardBg, border: `1px solid ${border}`, borderRadius: '10px', padding: '0.6rem 1rem', maxWidth: '400px' }}>
             <span style={{ color: textMuted }}>🔍</span>
-            <input placeholder="Search assets..." value={search} onChange={e => setSearch(e.target.value)}
+            <input placeholder="Search by name, IP or hostname..." value={search} onChange={e => setSearch(e.target.value)}
               style={{ background: 'transparent', border: 'none', outline: 'none', color: textMain, fontFamily: 'inherit', fontSize: '0.875rem', width: '100%' }} />
           </div>
         </div>
 
-        {/* Asset Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
           {filtered.map(asset => {
             const risk = riskColors[asset.criticality] || riskColors.low
@@ -160,16 +167,14 @@ export default function Assets() {
                     <p style={{ margin: 0, color: textMuted, fontSize: '0.8rem', textTransform: 'capitalize' }}>{asset.asset_type}</p>
                   </div>
                 </div>
-
                 <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
                   <span style={{ padding: '0.2rem 0.6rem', borderRadius: '20px', fontSize: '0.75rem', background: 'rgba(16,185,129,0.1)', color: '#10B981', fontWeight: '500' }}>Active</span>
                   <span style={{ padding: '0.2rem 0.6rem', borderRadius: '20px', fontSize: '0.75rem', background: risk.bg, color: risk.color, fontWeight: '500' }}>{risk.label}</span>
                 </div>
-
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '1rem', fontSize: '0.8rem' }}>
                   <div>
                     <p style={{ margin: '0 0 0.1rem', color: textMuted }}>IP Address</p>
-                    <p style={{ margin: 0, color: textMain, fontFamily: 'monospace' }}>{asset.ip_address}</p>
+                    <p style={{ margin: 0, color: textMain, fontFamily: 'monospace' }}>{asset.ip_address || '-'}</p>
                   </div>
                   <div>
                     <p style={{ margin: '0 0 0.1rem', color: textMuted }}>Environment</p>
@@ -184,7 +189,6 @@ export default function Assets() {
                     <p style={{ margin: 0, color: asset.last_scanned ? '#10B981' : textMuted }}>{asset.last_scanned ? new Date(asset.last_scanned).toLocaleDateString() : 'Never'}</p>
                   </div>
                 </div>
-
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <button onClick={() => scanAsset(asset.id)} disabled={scanning[asset.id]} style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', background: scanning[asset.id] ? (darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)') : '#10B981', border: 'none', color: scanning[asset.id] ? textMuted : 'white', fontFamily: 'inherit', fontSize: '0.8rem', cursor: scanning[asset.id] ? 'not-allowed' : 'pointer', fontWeight: '500' }}>
                     {scanning[asset.id] ? '⏳ Scanning...' : '🔍 Scan'}
@@ -195,11 +199,12 @@ export default function Assets() {
             )
           })}
           {filtered.length === 0 && (
-            <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '3rem', color: textMuted }}>No assets found. Add your first asset!</div>
+            <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '3rem', color: textMuted }}>
+              {search ? `No assets found for "${search}"` : 'No assets yet. Add your first asset!'}
+            </div>
           )}
         </div>
 
-        {/* Modal */}
         {showModal && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, backdropFilter: 'blur(4px)' }}>
             <div style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: '16px', padding: '2rem', width: '90%', maxWidth: '480px', boxShadow: '0 20px 60px rgba(0,0,0,0.5)', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -213,7 +218,7 @@ export default function Assets() {
               <form onSubmit={handleAddAsset} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {[
                   { label: 'Asset Name *', key: 'name', placeholder: 'e.g. Web Server 1' },
-                  { label: 'IP Address *', key: 'ip_address', placeholder: 'e.g. 192.168.1.10' },
+                  { label: 'IP Address', key: 'ip_address', placeholder: 'e.g. 192.168.1.10 or server.corp' },
                   { label: 'Hostname', key: 'hostname', placeholder: 'e.g. webserver1.local' },
                   { label: 'Operating System', key: 'os', placeholder: 'e.g. Ubuntu 22.04' },
                   { label: 'Owner Name', key: 'owner_name', placeholder: 'e.g. John Doe' },
@@ -244,6 +249,41 @@ export default function Assets() {
             </div>
           </div>
         )}
+
+        {scanModal && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, backdropFilter: 'blur(4px)' }}>
+            <div style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: '16px', padding: '2rem', width: '90%', maxWidth: '480px', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <div>
+                  <h2 style={{ margin: '0 0 0.25rem', color: textMain, fontSize: '1.25rem', fontWeight: '700' }}>🔍 Scan Complete</h2>
+                  <p style={{ margin: 0, color: textMuted, fontSize: '0.8rem' }}>{scanResults.length} vulnerabilities found</p>
+                </div>
+                <button onClick={() => setScanModal(false)} style={{ background: 'none', border: 'none', color: textMuted, cursor: 'pointer', fontSize: '1.25rem' }}>✕</button>
+              </div>
+              {scanResults.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2rem', color: textMuted }}>
+                  <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>✅</div>
+                  <p style={{ margin: 0, fontWeight: '600', color: textMain }}>No vulnerabilities found!</p>
+                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem' }}>This asset looks clean.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '300px', overflowY: 'auto' }}>
+                  {scanResults.map((v, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', borderRadius: '8px', border: `1px solid ${border}` }}>
+                      <span style={{ padding: '0.2rem 0.6rem', borderRadius: '20px', fontSize: '0.7rem', fontWeight: '700', background: sevBg[v.severity], color: sevColors[v.severity], textTransform: 'uppercase', flexShrink: 0 }}>{v.severity}</span>
+                      <p style={{ margin: 0, color: textMain, fontSize: '0.85rem', flex: 1 }}>{v.title}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+                <button onClick={() => { setScanModal(false); router.push('/vulnerabilities') }} style={{ flex: 1, padding: '0.75rem', background: '#10B981', border: 'none', borderRadius: '8px', color: 'white', fontFamily: 'inherit', fontSize: '0.875rem', cursor: 'pointer', fontWeight: '600' }}>View All Vulnerabilities</button>
+                <button onClick={() => setScanModal(false)} style={{ flex: 1, padding: '0.75rem', background: 'transparent', border: `1px solid ${border}`, borderRadius: '8px', color: textMuted, fontFamily: 'inherit', fontSize: '0.875rem', cursor: 'pointer' }}>Close</button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </main>
     </div>
   )
