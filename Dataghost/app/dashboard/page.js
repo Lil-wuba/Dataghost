@@ -24,6 +24,7 @@ function DashboardContent() {
   const [severityCounts, setSeverityCounts] = useState({ critical: 0, high: 0, medium: 0, low: 0 })
   const [monthlyData, setMonthlyData] = useState({ labels: [], critical: [], high: [], medium: [], low: [] })
   const [riskyAssets, setRiskyAssets] = useState([])
+  const [recentScans, setRecentScans] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -99,6 +100,10 @@ function DashboardContent() {
           return { asset_name: asset?.name || 'Unknown Asset', critical_count: criticalCount }
         })
       setRiskyAssets(topAssets)
+
+      // Load recent site scans
+      const { data: scans } = await supabase.from('scan_history').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(4)
+      setRecentScans(scans || [])
       setLoading(false)
     }
     loadDashboard()
@@ -115,6 +120,9 @@ function DashboardContent() {
         loadDashboard()
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'assets' }, () => {
+        loadDashboard()
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'scan_history' }, () => {
         loadDashboard()
       })
       .subscribe()
@@ -280,7 +288,9 @@ function DashboardContent() {
               </div>
 
               <div style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: '14px', padding: '1.5rem', transition: 'background 0.3s' }}>
-                <h3 style={{ margin: '0 0 1.25rem', color: textMain, fontSize: '1rem', fontWeight: '600' }}>Quick Actions</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                <h3 style={{ margin: 0, color: textMain, fontSize: '1rem', fontWeight: '600' }}>Quick Actions</h3>
+              </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {[
                     { label: 'Scan All Assets', desc: 'Run vulnerability scan', icon: '🔍', href: '/assets', color: '#10B981' },
