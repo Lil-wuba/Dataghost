@@ -46,10 +46,24 @@ export default function Threats() {
     setLoading(false)
   }
 
+  const [refreshing, setRefreshing] = useState(false)
+
   async function refreshFeed() {
-    showToast('🔄 Refreshing feed...')
-    await loadThreats()
-    showToast('✅ Feed refreshed!')
+    setRefreshing(true)
+    showToast('🔄 Fetching latest CVEs from NVD...')
+    try {
+      const res = await fetch('https://nebwlbldbxfdbcjwgqcd.supabase.co/functions/v1/refresh-threat-feed', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }
+      })
+      const data = await res.json()
+      if (data.added > 0) showToast(`✅ Added ${data.added} new CVEs from NVD!`)
+      else showToast('✅ Feed is up to date')
+      await loadThreats()
+    } catch {
+      showToast('⚠️ Could not reach NVD — showing cached data')
+      await loadThreats()
+    }
+    setRefreshing(false)
   }
 
   const severityConfig = {
@@ -83,7 +97,7 @@ export default function Threats() {
             </h1>
             <p style={{ margin: 0, color: textMuted, fontSize: '0.875rem' }}>Live CVE feed and threat intelligence data.</p>
           </div>
-          <button onClick={refreshFeed} style={{ padding: '0.6rem 1.25rem', background: '#10B981', border: 'none', borderRadius: '8px', color: 'white', fontSize: '0.875rem', cursor: 'pointer', fontWeight: '600' }}>🔄 Refresh</button>
+          <button onClick={refreshFeed} disabled={refreshing} style={{ padding: '0.6rem 1.25rem', background: '#10B981', border: 'none', borderRadius: '8px', color: 'white', fontSize: '0.875rem', cursor: 'pointer', fontWeight: '600' }}>🔄 Refresh</button>
         </div>
 
         {loading ? (

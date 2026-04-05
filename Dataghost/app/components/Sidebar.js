@@ -12,7 +12,7 @@ const navItems = [
   { href: '/threats', icon: '⚠️', label: 'Threats' },
   { href: '/remediation', icon: '🔧', label: 'Remediation' },
   { href: '/compliance', icon: '📋', label: 'Reports' },
-  { href: '/auditor', icon: '🔍', label: 'Site Auditor' },
+  { href: '/site-audit', icon: '🔍', label: 'Site Auditor' },
   { href: '/cve', icon: '🔎', label: 'CVE Database' },
   { href: '/scan-history', icon: '🕐', label: 'Scan History' },
   { href: '/audit-logs', icon: '📜', label: 'Audit Logs' },

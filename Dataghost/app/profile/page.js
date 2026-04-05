@@ -15,6 +15,12 @@ export default function Profile() {
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('profile')
   const [stats, setStats] = useState({ assets: 0, vulns: 0, plans: 0, reports: 0 })
+  const [notifPrefs, setNotifPrefs] = useState({
+    critical_vulns: true,
+    threat_feed: true,
+    scan_complete: false,
+    compliance_reports: false,
+  })
 
   useEffect(() => { loadProfile() }, [])
 
@@ -38,13 +44,6 @@ export default function Profile() {
     ])
     setStats({ assets: assets || 0, vulns: vulns || 0, plans: plans || 0, reports: reports || 0 })
   }
-
-  const [notifPrefs, setNotifPrefs] = useState({
-    critical_vulns: true,
-    threat_feed: true,
-    scan_complete: false,
-    compliance_reports: false,
-  })
 
   async function saveNotifPrefs() {
     setLoading(true)
