@@ -19,10 +19,10 @@ export async function POST(req) {
               <p style="margin: 0; color: rgba(255,255,255,0.6);">Severity: <strong style="color: #EF4444;">CRITICAL</strong></p>
               ${data?.asset ? `<p style="margin: 8px 0 0; color: rgba(255,255,255,0.6);">Asset: <strong style="color: white;">${data.asset}</strong></p>` : ''}
             </div>
-            <a href="https://vulnerability-app-blush.vercel.app/vulnerabilities" style="display: inline-block; padding: 14px 28px; background: #EF4444; color: white; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px;">View Vulnerability →</a>
+            <a href="https://dataghost.vercel.app/vulnerabilities" style="display: inline-block; padding: 14px 28px; background: #EF4444; color: white; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px;">View Vulnerability →</a>
           </div>
           <div style="padding: 20px 32px; border-top: 1px solid rgba(255,255,255,0.06); text-align: center;">
-            <p style="margin: 0; color: rgba(255,255,255,0.3); font-size: 13px;">👻 DataGhost Security Platform • <a href="https://vulnerability-app-blush.vercel.app" style="color: #10B981; text-decoration: none;">vulnerability-app-blush.vercel.app</a></p>
+            <p style="margin: 0; color: rgba(255,255,255,0.3); font-size: 13px;">👻 DataGhost Security Platform • <a href="https://dataghost.vercel.app" style="color: #10B981; text-decoration: none;">dataghost.vercel.app</a></p>
           </div>
         </div>`,
 
@@ -41,11 +41,11 @@ export async function POST(req) {
                 <span style="color: rgba(255,255,255,0.8); font-size: 15px;">${step}</span>
               </div>`).join('')}
             <div style="margin-top: 28px;">
-              <a href="https://vulnerability-app-blush.vercel.app/dashboard" style="display: inline-block; padding: 14px 28px; background: #10B981; color: white; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px; box-shadow: 0 4px 15px rgba(16,185,129,0.3);">Go to Dashboard →</a>
+              <a href="https://dataghost.vercel.app/dashboard" style="display: inline-block; padding: 14px 28px; background: #10B981; color: white; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px; box-shadow: 0 4px 15px rgba(16,185,129,0.3);">Go to Dashboard →</a>
             </div>
           </div>
           <div style="padding: 20px 32px; border-top: 1px solid rgba(255,255,255,0.06); text-align: center;">
-            <p style="margin: 0; color: rgba(255,255,255,0.3); font-size: 13px;">👻 DataGhost Security Platform • <a href="https://vulnerability-app-blush.vercel.app" style="color: #10B981; text-decoration: none;">vulnerability-app-blush.vercel.app</a></p>
+            <p style="margin: 0; color: rgba(255,255,255,0.3); font-size: 13px;">👻 DataGhost Security Platform • <a href="https://dataghost.vercel.app" style="color: #10B981; text-decoration: none;">dataghost.vercel.app</a></p>
           </div>
         </div>`,
 
@@ -68,7 +68,7 @@ export async function POST(req) {
                 <p style="margin: 0; color: rgba(255,255,255,0.5); font-size: 13px;">Security Score / 100</p>
               </div>
             </div>
-            <a href="https://vulnerability-app-blush.vercel.app/scan-history" style="display: inline-block; padding: 14px 28px; background: #6366F1; color: white; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px;">View Full Report →</a>
+            <a href="https://dataghost.vercel.app/scan-history" style="display: inline-block; padding: 14px 28px; background: #6366F1; color: white; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px;">View Full Report →</a>
           </div>
           <div style="padding: 20px 32px; border-top: 1px solid rgba(255,255,255,0.06); text-align: center;">
             <p style="margin: 0; color: rgba(255,255,255,0.3); font-size: 13px;">👻 DataGhost Security Platform</p>

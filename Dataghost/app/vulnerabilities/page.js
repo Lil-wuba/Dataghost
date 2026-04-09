@@ -91,7 +91,27 @@ export default function Vulnerabilities() {
     }])
     setAdding(false)
     if (error) showToast('Error: ' + error.message)
-    else { setShowAddModal(false); setNewVuln({ title: '', cve_id: '', severity: 'medium', status: 'open', asset_id: '', description: '', business_impact: '' }); loadData(); showToast('✅ Vulnerability added!') }
+    else {
+      setShowAddModal(false)
+      setNewVuln({ title: '', cve_id: '', severity: 'medium', status: 'open', asset_id: '', description: '', business_impact: '' })
+      loadData()
+      showToast('✅ Vulnerability added!')
+      // Auto-email for critical vulns
+      if (newVuln.severity === 'critical') {
+        try {
+          await fetch('/api/send-notification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: session.user.email,
+              subject: '🚨 Critical Vulnerability Detected — ' + newVuln.title,
+              type: 'critical_vuln',
+              data: { title: newVuln.title, asset: assets.find(a => a.id === newVuln.asset_id)?.name || 'Unknown' }
+            })
+          })
+        } catch(e) { console.log('Email notification skipped:', e.message) }
+      }
+    }
   }
 
   async function createRemPlan(e) {

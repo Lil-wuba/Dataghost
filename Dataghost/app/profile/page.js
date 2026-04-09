@@ -9,7 +9,7 @@ export default function Profile() {
   const router = useRouter()
   const darkMode = useTheme()
   const [user, setUser] = useState(null)
-  const [profile, setProfile] = useState({ full_name: '', role: '', email: '' })
+  const [profile, setProfile] = useState({ full_name: '', role: '', email: '', company: '' })
   const [passwords, setPasswords] = useState({ new: '', confirm: '' })
   const [toast, setToast] = useState('')
   const [loading, setLoading] = useState(false)
@@ -32,7 +32,7 @@ export default function Profile() {
     setUser(session.user)
     const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single()
     if (data) {
-      setProfile({ full_name: data.full_name || '', role: data.role || 'admin', email: session.user.email })
+      setProfile({ full_name: data.full_name || '', role: data.role || 'admin', email: session.user.email, company: data.company || '' })
       if (data.notification_prefs) setNotifPrefs(data.notification_prefs)
     }
     const userId = session.user.id
@@ -65,7 +65,7 @@ export default function Profile() {
   async function updateProfile(e) {
     e.preventDefault(); setLoading(true)
     try {
-      const { error } = await supabase.from('profiles').upsert({ id: user.id, full_name: profile.full_name, role: profile.role, updated_at: new Date().toISOString() })
+      const { error } = await supabase.from('profiles').upsert({ id: user.id, full_name: profile.full_name, role: profile.role, company: profile.company || null, email: user.email, updated_at: new Date().toISOString() })
       if (error) throw error
       showToast('✅ Profile updated!')
     } catch (error) { showToast('Error: ' + error.message) }

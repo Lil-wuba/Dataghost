@@ -210,7 +210,7 @@ export default function Landing() {
                   <div key={i} style={{ width: '10px', height: '10px', borderRadius: '50%', background: c, opacity: 0.7 }} />
                 ))}
               </div>
-              <div style={{ flex: 1, background: 'rgba(255,255,255,0.05)', borderRadius: '4px', padding: '0.25rem 0.75rem', fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', textAlign: 'left' }}>vulnerability-app-blush.vercel.app/dashboard</div>
+              <div style={{ flex: 1, background: 'rgba(255,255,255,0.05)', borderRadius: '4px', padding: '0.25rem 0.75rem', fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', textAlign: 'left' }}>dataghost.vercel.app/dashboard</div>
             </div>
             {/* Mock stats */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
@@ -405,7 +405,7 @@ export default function Landing() {
           <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
             {[
               { label: 'Dashboard', href: '/dashboard' },
-              { label: 'Site Auditor', href: '/auditor' },
+              { label: 'Site Auditor', href: '/site-audit' },
               { label: 'CVE Database', href: '/cve' },
               { label: 'Compliance', href: '/compliance' },
               { label: 'Sign Up', href: '/signup' },

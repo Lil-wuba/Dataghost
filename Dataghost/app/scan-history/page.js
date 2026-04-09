@@ -37,7 +37,7 @@ export default function ScanHistory() {
   }
 
   function reRunScan(url) {
-    router.push('/auditor?url=' + encodeURIComponent(url))
+    router.push('/site-audit?url=' + encodeURIComponent(url))
   }
 
   const bg = darkMode ? '#0A0A0F' : '#F0F2F5'
