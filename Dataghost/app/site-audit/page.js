@@ -23,6 +23,8 @@ function SiteAuditInner() {
   const [sslPolling, setSslPolling] = useState(false)
   const [saved, setSaved] = useState(false)
   const [toast, setToast] = useState('')
+  const [vtResult, setVtResult] = useState(null)
+  const [vtLoading, setVtLoading] = useState(false)
 
   const bg = darkMode ? '#0A0A0F' : '#F0F2F5'
   const cardBg = darkMode ? '#13131A' : '#FFFFFF'
@@ -58,6 +60,23 @@ function SiteAuditInner() {
     }
   }
 
+  async function checkVirusTotal(cleanUrl) {
+    setVtLoading(true)
+    setVtResult(null)
+    try {
+      const res = await fetch('/api/virustotal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: cleanUrl })
+      })
+      const data = await res.json()
+      setVtResult(data)
+    } catch (err) {
+      setVtResult({ error: err.message })
+    }
+    setVtLoading(false)
+  }
+
   async function runAudit() {
     if (!url.trim()) return
     const cleanUrl = url.startsWith('http') ? url : 'https://' + url
@@ -66,6 +85,7 @@ function SiteAuditInner() {
     setLoading({ headers: true, dns: true, ssl: true })
     setActiveTab('overview')
     setSaved(false)
+    setVtResult(null)
 
     const [headersRes, dnsRes] = await Promise.all([
       fetch('/api/headers-check', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: cleanUrl }) }),
@@ -79,6 +99,7 @@ function SiteAuditInner() {
     setErrors(prev => ({ ...prev, headers: headersData.error || null, dns: dnsData.error || null }))
     setLoading(prev => ({ ...prev, headers: false, dns: false }))
     await checkSSL(cleanUrl, 0, hd, dd)
+    checkVirusTotal(cleanUrl)
   }
 
   async function checkSSL(cleanUrl, attempt, headersData, dnsData) {
@@ -213,8 +234,8 @@ function SiteAuditInner() {
               )}
               <div style={{ background: cardBg, border: '1px solid ' + border, borderRadius: '14px', padding: '1rem', transition: 'background 0.3s' }}>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-                  {['overview', 'headers', 'ssl', 'dns'].map(tab => {
-                    const labels = { overview: '📊 Overview', headers: '🔒 Headers', ssl: '🛡️ SSL', dns: '🌐 DNS' }
+                  {['overview', 'headers', 'ssl', 'dns', 'virustotal'].map(tab => {
+                    const labels = { overview: '📊 Overview', headers: '🔒 Headers', ssl: '🛡️ SSL', dns: '🌐 DNS', virustotal: '🦠 VirusTotal' }
                     return (
                       <button key={tab} onClick={() => setActiveTab(tab)}
                         style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid ' + (activeTab === tab ? '#10B981' : border), background: activeTab === tab ? 'rgba(16,185,129,0.1)' : 'transparent', color: activeTab === tab ? '#10B981' : textMuted, fontFamily: 'inherit', fontSize: '0.85rem', cursor: 'pointer', fontWeight: activeTab === tab ? '600' : '400', transition: 'all 0.15s' }}>
@@ -425,6 +446,67 @@ function SiteAuditInner() {
               </div>
             )}
           </>
+        )}
+
+        {activeTab === 'virustotal' && (
+          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '14px', overflow: 'hidden' }}>
+            {vtLoading ? (
+              <div style={{ padding: '3rem', textAlign: 'center', color: textMuted }}>
+                <div style={{ width: '40px', height: '40px', border: '3px solid ' + border, borderTop: '3px solid #10B981', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 1rem' }} />
+                <p style={{ margin: 0, fontWeight: '600', color: textMain }}>Scanning with VirusTotal...</p>
+                <p style={{ margin: '0.5rem 0 0', fontSize: '0.875rem' }}>Checking against 70+ antivirus engines</p>
+              </div>
+            ) : vtResult?.error ? (
+              <div style={{ padding: '3rem', textAlign: 'center', color: textMuted }}>
+                <p style={{ color: '#EF4444', margin: 0 }}>❌ {vtResult.error}</p>
+              </div>
+            ) : vtResult ? (
+              <div style={{ padding: '1.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1.5rem', padding: '1.25rem', background: vtResult.safe ? 'rgba(16,185,129,0.06)' : 'rgba(239,68,68,0.06)', border: '1px solid ' + (vtResult.safe ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'), borderRadius: '12px' }}>
+                  <div style={{ fontSize: '3rem' }}>{vtResult.safe ? '✅' : '🚨'}</div>
+                  <div>
+                    <p style={{ margin: '0 0 0.25rem', color: vtResult.safe ? '#10B981' : '#EF4444', fontSize: '1.1rem', fontWeight: '800' }}>
+                      {vtResult.safe ? 'Clean — No Threats Detected' : `Threats Detected (${vtResult.malicious} engines flagged)`}
+                    </p>
+                    <p style={{ margin: 0, color: textMuted, fontSize: '0.875rem' }}>Scanned by {vtResult.total} antivirus engines</p>
+                    {vtResult.note && <p style={{ margin: '0.25rem 0 0', color: textMuted, fontSize: '0.78rem', fontStyle: 'italic' }}>{vtResult.note}</p>}
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                  {[
+                    { label: 'Malicious', value: vtResult.malicious, color: '#EF4444' },
+                    { label: 'Suspicious', value: vtResult.suspicious, color: '#F59E0B' },
+                    { label: 'Harmless', value: vtResult.harmless, color: '#10B981' },
+                    { label: 'Undetected', value: vtResult.undetected, color: textMuted },
+                  ].map((item, i) => (
+                    <div key={i} style={{ background: darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', border: '1px solid ' + border, borderRadius: '10px', padding: '1rem', textAlign: 'center' }}>
+                      <p style={{ margin: '0 0 0.25rem', color: textMuted, fontSize: '0.72rem', textTransform: 'uppercase' }}>{item.label}</p>
+                      <p style={{ margin: 0, color: item.color, fontSize: '1.5rem', fontWeight: '800' }}>{item.value}</p>
+                    </div>
+                  ))}
+                </div>
+                {vtResult.engines?.length > 0 && (
+                  <div>
+                    <p style={{ color: '#EF4444', fontWeight: '700', fontSize: '0.875rem', marginBottom: '0.75rem' }}>🚨 Flagged by these engines:</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {vtResult.engines.map((e, i) => (
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.6rem 0.875rem', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px' }}>
+                          <span style={{ color: textMain, fontWeight: '500', fontSize: '0.875rem' }}>{e.engine}</span>
+                          <span style={{ color: '#EF4444', fontSize: '0.8rem' }}>{e.result}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ padding: '3rem', textAlign: 'center', color: textMuted }}>
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🦠</div>
+                <p style={{ color: textMain, fontWeight: '600', margin: '0 0 0.5rem' }}>VirusTotal Scan</p>
+                <p style={{ fontSize: '0.875rem', margin: 0 }}>Run an audit first — VirusTotal will check automatically</p>
+              </div>
+            )}
+          </div>
         )}
 
         {!isLoading && !results.headers && !results.dns && !results.ssl && (
